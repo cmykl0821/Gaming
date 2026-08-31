@@ -13,12 +13,55 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🎮 遊戲成癮程度分析")
+
 
 st.write(
     "透過使用者輸入資料計算遊戲成癮程度"
 
 )
+def password_required():
+    """只有輸入 Streamlit Secrets 中的密碼後，才允許顯示主頁。"""
+    if st.session_state.get("authenticated", False):
+        return True
+
+    try:
+        expected_password = str(st.secrets["APP_PASSWORD"])
+    except (FileNotFoundError, KeyError):
+        st.error("尚未設定登入密碼，請先在 Streamlit 平台的 Secrets 加入 APP_PASSWORD。")
+        st.code('APP_PASSWORD = "請設定你的密碼"', language="toml")
+        return False
+
+    if not expected_password:
+        st.error("APP_PASSWORD 不可為空白，請到 Streamlit 平台重新設定。")
+        return False
+
+    st.title("🎮 遊戲成癮程度分析")
+    st.caption("請輸入密碼後進入分析主頁。")
+
+    with st.form("login_form", clear_on_submit=True):
+        entered_password = st.text_input(
+            "密碼",
+            type="password",
+            placeholder="請輸入登入密碼",
+        )
+        submitted = st.form_submit_button("登入", width="stretch")
+
+    if submitted:
+        if hmac.compare_digest(entered_password, expected_password):
+            st.session_state["authenticated"] = True
+            st.rerun()
+        else:
+            st.error("密碼錯誤，請重新輸入。")
+
+    return False
+
+
+if not password_required():
+    st.stop()
+
+if st.sidebar.button("🔒 登出", width="stretch"):
+    st.session_state["authenticated"] = False
+    st.rerun()
 
 
 # =====================================================
